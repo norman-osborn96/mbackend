@@ -19,7 +19,7 @@ SCOPES = [
 ]
 
 # Use dynamic or Render URL for callback
-REDIRECT_URI = os.getenv("REDIRECT_URI", "https://mbackend-eq1g.onrender.com/api/auth/callback")
+REDIRECT_URI = os.getenv("REDIRECT_URI", "https://mbackend-eqjg.onrender.com/api/auth/callback")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "https://mailpulse.netlify.app")
 
 def get_flow():

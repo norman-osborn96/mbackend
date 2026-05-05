@@ -5,7 +5,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from starlette.middleware.sessions import SessionMiddleware
-from app.api.routes.auth import router as auth_router
 
 load_dotenv()
 
