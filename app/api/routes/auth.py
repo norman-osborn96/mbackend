@@ -4,9 +4,6 @@ import os
 from google_auth_oauthlib.flow import Flow
 from app.core.logger import get_logger
 from app.services import gmail_sync
-from app.api.routes.auth import router as auth_router
-
-app.include_router(auth_router)
 
 router = APIRouter(prefix="/api/auth")
 log = get_logger("auth_route")
