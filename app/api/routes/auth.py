@@ -18,11 +18,9 @@ SCOPES = [
     'https://www.googleapis.com/auth/userinfo.email',
 ]
 
-# Fixed redirect URI — must use localhost consistently (not 127.0.0.1)
-# REDIRECT_URI = "http://localhost:8000/api/auth/callback"
-# FRONTEND_URL = "http://localhost:3000"
-REDIRECT_URI = "https://mbackend-eqig.onrender.com/api/auth/callback"
-FRONTEND_URL = "https://mailpulse.netlify.app"
+# Use dynamic or Render URL for callback
+REDIRECT_URI = os.getenv("REDIRECT_URI", "https://mbackend-eq1g.onrender.com/api/auth/callback")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://mailpulse.netlify.app")
 
 def get_flow():
     if not os.path.exists("app/credentials.json"):
@@ -98,8 +96,11 @@ def callback(request: Request, background_tasks: BackgroundTasks):
         import traceback
         print("Auth Callback Error:", e)
         traceback.print_exc()
-        with open("auth_error.log", "w") as f:
-            f.write(traceback.format_exc())
+        try:
+            with open("auth_error.log", "w") as f:
+                f.write(traceback.format_exc())
+        except:
+            pass
         return RedirectResponse(f"{FRONTEND_URL}/login?error=auth_failed")
 
 @router.get("/status")
