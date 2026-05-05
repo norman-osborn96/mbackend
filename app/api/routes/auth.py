@@ -16,8 +16,10 @@ SCOPES = [
 ]
 
 # Fixed redirect URI — must use localhost consistently (not 127.0.0.1)
-REDIRECT_URI = "http://localhost:8000/api/auth/callback"
-FRONTEND_URL = "http://localhost:3000"
+# REDIRECT_URI = "http://localhost:8000/api/auth/callback"
+# FRONTEND_URL = "http://localhost:3000"
+REDIRECT_URI = "https://mbackend-eqig.onrender.com/api/auth/callback"
+FRONTEND_URL = "https://mailpulse.netlify.app"
 
 def get_flow():
     if not os.path.exists("app/credentials.json"):
