@@ -1,0 +1,22 @@
+{
+  "rohan.sharmars0078@gmail.com": {
+    "email_address": "rohan.sharmars0078@gmail.com",
+    "history_id": "18528",
+    "watch_expiration": 1778051496792,
+    "topic_name": "projects/gmail-api-493309/topics/gmail-notifications",
+    "credentials": {
+      "token": "ya29.a0AQvPyIPMd9KQ0OyuJ1CSdB_PYo24215644dXU6WHgX9BIrvoLwAxe4EZ5mdxLlRIL5x11jAjhlvqozJ1AIswPQyC7yUs636gsxenPUiR3bxWC_CFS_FZ8wxKVM59Tg9-rGJD-oVxGlGjKVwCaY_mwxP8xCfWPmOwz5XgTkodSH_iroYanCs6BL1vNzywm4SFKxaDJBwaCgYKAbQSARESFQHGX2Mi8yIxWBtw8y5OEtSkAh5FKA0206",
+      "refresh_token": "1//0g8vZOvgmAI8jCgYIARAAGBASNwF-L9IrbLIwRVQogIv4RjuLgY4EJSyfsamnqxYw2ATIzBo-KdVaVkLgRJp2Og_M2E2eW-v3Ojo",
+      "token_uri": "https://oauth2.googleapis.com/token",
+      "client_id": "906315653722-n2m3meohh4ktu133qbi54970mqicrlbv.apps.googleusercontent.com",
+      "client_secret": "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",
+      "scopes": [
+        "https://www.googleapis.com/auth/gmail.readonly",
+        "https://www.googleapis.com/auth/gmail.send",
+        "openid",
+        "https://www.googleapis.com/auth/userinfo.email"
+      ]
+    },
+    "last_synced_at": 1777613990.077464
+  }
+}

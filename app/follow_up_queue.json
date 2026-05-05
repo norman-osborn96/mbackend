@@ -1,0 +1,43 @@
+{
+  "accounts": {
+    "rohan.sharmars0078@gmail.com": {
+      "items": [
+        {
+          "id": "19dddea667591f5b",
+          "thread_id": "19dddea667591f5b",
+          "email_id": "19dddea667591f5b",
+          "subject": "Testing Emails",
+          "sender": "Anshul Sharma <as5297174@gmail.com>",
+          "last_message_at": "2026-04-30T10:23:26+00:00",
+          "requires_reply": false,
+          "priority": "HIGH"
+        },
+        {
+          "id": "19db46d0a13d433c",
+          "thread_id": "19db46d0a13d433c",
+          "email_id": "19dd3f8ecd2ea8fd",
+          "subject": "Re: Security vulnerabilities detected in your Supabase projects",
+          "sender": "rohan.sharmars0078@gmail.com",
+          "last_message_at": "2026-04-28T12:03:19+00:00",
+          "requires_reply": true,
+          "priority": "HIGH"
+        },
+        {
+          "id": "19d8f9e0a48e12c6",
+          "thread_id": "19d8f9e0a48e12c6",
+          "email_id": "19d8f9e0a48e12c6",
+          "subject": "Security alert",
+          "sender": "Google <no-reply@accounts.google.com>",
+          "last_message_at": "2026-04-15T05:29:51+00:00",
+          "requires_reply": true,
+          "priority": "HIGH"
+        }
+      ],
+      "dismissed_thread_ids": [
+        "19d8fcb2e0865250",
+        "19dd7f726b03d7e7"
+      ],
+      "updated_at": 1777616180.3930497
+    }
+  }
+}
