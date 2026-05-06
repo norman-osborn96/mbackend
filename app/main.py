@@ -8,7 +8,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 load_dotenv()
 
-from app.api.routes import dashboard, emails, rules, priority, auth, gmail, followups
+from app.api.routes import dashboard, emails, rules, priority, auth, gmail, followups, addon
 from app.core import scheduler, followup_scheduler
 from app.core.logger import get_logger
 
@@ -47,6 +47,7 @@ app.include_router(priority.router)
 app.include_router(auth.router)
 app.include_router(gmail.router)
 app.include_router(followups.router)
+app.include_router(addon.router)
 
 
 @app.on_event("startup")
