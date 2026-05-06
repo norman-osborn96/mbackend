@@ -17,7 +17,7 @@ SCOPES = [
 
 # Use dynamic or Render URL for callback
 REDIRECT_URI = os.getenv("REDIRECT_URI", "https://mbackend-eqjg.onrender.com/api/auth/callback")
-FRONTEND_URL = os.getenv("FRONTEND_URL", "https://mailpulse.netlify.app")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://pulse-mail.netlify.app")
 
 def get_flow():
     if not os.path.exists("app/credentials.json"):
