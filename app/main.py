@@ -19,7 +19,14 @@ app = FastAPI(title="MailPulse API")
 # CORS must list specific origins when using credentials (cookies)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://mailpulse.netlify.app", "https://pulse-mail.netlify.app/"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "https://mailpulse.netlify.app",
+        "https://mail-pulse.netlify.app",
+        "https://pulse-mail.netlify.app"
+    ],
+
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -29,8 +36,8 @@ app.add_middleware(
     SessionMiddleware,
     secret_key="some-super-secret-mailpulse-key",
     max_age=3600 * 24 * 7,  # 7 days
-    same_site="lax",
-    https_only=False,
+    same_site="none",
+    https_only=True,
 )
 
 app.include_router(dashboard.router)

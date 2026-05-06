@@ -1,0 +1,12 @@
+.env
+__pycache__/
+*.pyc
+app/ai_cache.json
+app/gmail_email_cache.json
+app/gmail_watch_state.json
+app/follow_up_queue.json
+app/manual_priority_rules.json
+app/vip_senders.json
+token.pkl
+credentials.json
+auth_error.log

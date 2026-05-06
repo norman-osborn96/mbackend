@@ -4,7 +4,54 @@ import requests
 import json
 from threading import Lock
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+# Support multiple API keys for higher rate limits
+_GEMINI_KEYS = [k.strip() for k in os.getenv("GEMINI_API_KEY", "").split(",") if k.strip()]
+_key_index = 0
+_key_lock = Lock()
+
+def _call_gemini_api(url_path: str, payload: dict, timeout: int = 10):
+    global _key_index
+    
+    # Refresh keys from env if possible, or use the cached ones
+    # For simplicity, we use the ones parsed at startup, but we can re-parse if empty
+    keys = _GEMINI_KEYS or [k.strip() for k in os.getenv("GEMINI_API_KEY", "").split(",") if k.strip()]
+    
+    if not keys:
+        raise Exception("No GEMINI_API_KEY found in environment")
+    
+    last_response = None
+    for attempt in range(len(keys)):
+        with _key_lock:
+            current_idx = _key_index % len(keys)
+            key = keys[current_idx]
+            _key_index += 1
+            
+        url = f"models/{url_path}:generateContent"
+        full_url = f"https://generativelanguage.googleapis.com/v1beta/{url}?key={key}"
+        
+        try:
+            res = requests.post(
+                full_url,
+                headers={"Content-Type": "application/json"},
+                json=payload,
+                timeout=timeout
+            )
+            last_response = res
+            
+            if res.status_code == 429:
+                print(f"⚠️ Key {current_idx + 1}/{len(keys)} rate limited (429). Retrying...")
+                continue
+                
+            return res
+        except Exception as e:
+            print(f"❌ API call error with key {current_idx + 1}/{len(keys)}: {e}")
+            if attempt == len(keys) - 1:
+                if last_response is not None: return last_response
+                raise e
+            continue
+            
+    return last_response
+
 
 CACHE_FILE = os.path.join(os.path.dirname(__file__), "../ai_cache.json")
 _cache_lock = Lock()
@@ -141,10 +188,9 @@ def classify_email_ai(subject: str, snippet: str, sender_domain: str = ""):
 Subject: {subject}
 Content: {snippet}"""
 
-        response = requests.post(
-            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}",
-            headers={"Content-Type": "application/json"},
-            json={
+        response = _call_gemini_api(
+            "gemini-1.5-flash",
+            {
                 "system_instruction": {"parts": [{"text": _EXEC_SYSTEM_PROMPT}]},
                 "contents": [{"role": "user", "parts": [{"text": user_prompt}]}],
                 "generationConfig": {
@@ -246,10 +292,9 @@ Content: {snippet}
 
 Write the grounded summary now: one or two complete sentences only, no preamble (only from the lines above)."""
 
-        response = requests.post(
-            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}",
-            headers={"Content-Type": "application/json"},
-            json={
+        response = _call_gemini_api(
+            "gemini-1.5-flash",
+            {
                 "system_instruction": {"parts": [{"text": _SUMMARY_SYSTEM_PROMPT}]},
                 "contents": [{"role": "user", "parts": [{"text": user_prompt}]}],
                 "generationConfig": {
@@ -317,10 +362,9 @@ From: {sender}
 Subject: {subject}
 Content: {snippet}"""
 
-        response = requests.post(
-            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}",
-            headers={"Content-Type": "application/json"},
-            json={
+        response = _call_gemini_api(
+            "gemini-1.5-flash",
+            {
                 "system_instruction": {"parts": [{"text": (
                     "You are a professional email assistant. "
                     "Write only the reply body — no subject, no greeting, no sign-off. "
