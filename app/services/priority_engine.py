@@ -222,32 +222,43 @@ def calculate_priority(email: dict) -> dict:
     VIP_SENDERS    = load_vip_senders()
     MEDIUM_SENDERS = load_medium_senders()
 
+    # ── Helpers for final return ──
+    def _finalize(lvl, sc, reas, conf=None, summ=None, act="FYI"):
+        # Always try to get a summary if missing
+        if summ is None:
+            try:
+                s_subj, s_content = _summary_source(email)
+                summ = summarize_email(s_subj, s_content)
+            except Exception:
+                summ = None
+        
+        res = {
+            "level": lvl,
+            "score": sc,
+            "reasons": reas,
+            "sender_email": sender_email,
+            "summary": summ,
+            "ai_action": act
+        }
+        if conf is not None:
+            res["confidence"] = conf
+        return res
+
     # ── 1. User overrides (strongest) ────────────────────────────────────────
     if sender_email in VIP_SENDERS:
-        return {
-            "level": "HIGH",
-            "score": 100,
-            "reasons": ["User marked as VIP"],
-            "sender_email": sender_email,
-        }
+        return _finalize("HIGH", 100, ["User marked as VIP"])
 
     if sender_email in MEDIUM_SENDERS:
-        return {
-            "level": "MEDIUM",
-            "score": 50,
-            "reasons": ["User marked as Medium Priority"],
-            "sender_email": sender_email,
-        }
+        return _finalize("MEDIUM", 50, ["User marked as Medium Priority"])
 
     # ── 2. Admin rule engine ─────────────────────────────────────────────────
     rule_result = apply_rules(email)
     if rule_result:
-        return {
-            "level": rule_result["level"],
-            "score": rule_result["score"],
-            "reasons": rule_result["reasons"],
-            "sender_email": sender_email,
-        }
+        return _finalize(
+            rule_result["level"],
+            rule_result["score"],
+            rule_result["reasons"]
+        )
 
     # ── 3. Critical-domain sender (government / regulator) ───────────────────
     if sender_domain in _CRITICAL_SENDER_DOMAINS:
@@ -270,34 +281,22 @@ def calculate_priority(email: dict) -> dict:
 
     # ── 5. Short-circuit: obvious bulk / promotional mail ────────────────────
     if score <= _BULK_CUTOFF:
-        return {
-            "level": "LOW",
-            "score": score,
-            "reasons": reasons or ["Bulk / automated / promotional mail detected"],
-            "sender_email": sender_email,
-        }
+        return _finalize(
+            "LOW", 
+            score, 
+            reasons or ["Bulk / automated / promotional mail detected"]
+        )
 
     # ── 6. Short-circuit: very strong executive signals ──────────────────────
     if score >= _SCORE_HIGH:
-        try:
-            s_subj, s_content = _summary_source(email)
-            summary = summarize_email(s_subj, s_content)
-        except Exception:
-            summary = None
-        return {
-            "level": "HIGH",
-            "score": score,
-            "reasons": reasons,
-            "summary": summary,
-            "sender_email": sender_email,
-        }
+        return _finalize("HIGH", score, reasons)
 
     # ── 7. AI classification for ambiguous emails ────────────────────────────
     try:
         print("🚀 AI BLOCK — score so far:", score)
-        subj_ai = email.get("subject") or ""
-        snip_ai = email.get("snippet") or ""
-        ai_result = classify_email_ai(subj_ai, snip_ai, sender_domain)
+        s_subj, s_content = _summary_source(email)
+        # Use extended content for classification too!
+        ai_result = classify_email_ai(s_subj, s_content, sender_domain)
         print("🔥 AI RESULT:", ai_result)
 
         if ai_result:
@@ -316,21 +315,22 @@ def calculate_priority(email: dict) -> dict:
                 ai_level  = "MEDIUM"
                 ai_reason = f"Keyword signals outweigh AI LOW assessment: {ai_reason}"
 
+            # Summary will be handled by _finalize if we don't pass it here,
+            # but we can try to get it now to keep the flow.
+            summary = None
             try:
-                s_subj, s_content = _summary_source(email)
                 summary = summarize_email(s_subj, s_content)
             except Exception:
-                summary = None
+                pass
 
-            return {
-                "level": ai_level,
-                "score": int(ai_confidence * 100),
-                "reasons": reasons + [f"AI: {ai_reason}"],
-                "confidence": ai_confidence,
-                "summary": summary,
-                "sender_email": sender_email,
-                "ai_action": ai_action,
-            }
+            return _finalize(
+                ai_level,
+                int(ai_confidence * 100),
+                reasons + [f"AI: {ai_reason}"],
+                conf=ai_confidence,
+                summ=summary,
+                act=ai_action
+            )
 
     except Exception as e:
         print("❌ AI FAILURE:", e)
@@ -346,9 +346,5 @@ def calculate_priority(email: dict) -> dict:
     else:
         level = "LOW"
 
-    return {
-        "level": level,
-        "score": score,
-        "reasons": reasons,
-        "sender_email": sender_email,
-    }
+    return _finalize(level, score, reasons)
+
