@@ -17,16 +17,23 @@ function buildMainCard(e) {
   var message = GmailApp.getMessageById(messageId);
   var subject = message.getSubject();
   var sender = message.getFrom();
-  var body = message.getPlainBody().substring(0, 3000); // Increased limit for better context
+  var body = message.getPlainBody().substring(0, 3000);
   
-  // Call Backend
-  var tone = (e.formInput && e.formInput.tone) || (e.parameters && e.parameters.tone) || "professional";
+  // Get tone from form or parameters (safe access)
+  var tone = "professional";
+  if (e.formInput && e.formInput.tone) {
+    tone = e.formInput.tone;
+  } else if (e.parameters && e.parameters.tone) {
+    tone = e.parameters.tone;
+  }
+  
+  // Call Backend for analysis
   var analysis = fetchAnalysis(subject, body, sender, tone);
   
   var card = CardService.newCardBuilder();
   card.setHeader(CardService.newCardHeader().setTitle("MailPulse AI Analysis"));
   
-  // 1. Priority Section
+  // ── 1. Priority Section ──
   var prioritySection = CardService.newCardSection();
   var level = (analysis.level || analysis.priority || "LOW").toUpperCase();
   var actionStatus = analysis.ai_action === "REQUIRES_REPLY" ? "🚨 ACTION REQUIRED" : "ℹ️ FYI ONLY";
@@ -36,102 +43,151 @@ function buildMainCard(e) {
     .setContent("<b>" + level + "</b>")
     .setBottomLabel(actionStatus)
     .setIcon(getPriorityIcon(level)));
-    
-  if (analysis.confidence) {
-    prioritySection.addWidget(CardService.newKeyValue()
-      .setTopLabel("AI Confidence")
-      .setContent((analysis.confidence * 100).toFixed(0) + "%")
-      .setIcon(CardService.Icon.STAR));
-  }
   
   card.addSection(prioritySection);
 
-  // 2. Sender Section
-  var senderSection = CardService.newCardSection().setHeader("Sender Analysis");
-  var senderEmail = extractEmailAddress(sender);
-  senderSection.addWidget(CardService.newKeyValue()
-    .setTopLabel("From")
-    .setContent(senderEmail)
-    .setMultiline(true));
-  
-  if (analysis.sender_email && analysis.sender_email.includes("@")) {
-    var domain = analysis.sender_email.split("@")[1];
-    senderSection.addWidget(CardService.newKeyValue()
-      .setTopLabel("Organization Domain")
-      .setContent(domain));
-  }
-  card.addSection(senderSection);
-
-  // 3. Summary Section
+  // ── 2. AI Summary Section ──
+  var summarySection = CardService.newCardSection().setHeader("✦ AI Summary");
   if (analysis.summary) {
-    var summarySection = CardService.newCardSection().setHeader("✦ AI Summary");
     summarySection.addWidget(CardService.newTextParagraph().setText(analysis.summary));
-    card.addSection(summarySection);
+  } else {
+    summarySection.addWidget(CardService.newTextParagraph().setText("<i>Summary not available for this email.</i>"));
   }
+  card.addSection(summarySection);
   
-  // 4. Reasons Section ("Why this rank")
+  // ── 3. Reasons Section ──
   if (analysis.reasons && analysis.reasons.length > 0) {
-    var reasonsSection = CardService.newCardSection().setHeader("Detailed Priority Reasons");
+    var reasonsSection = CardService.newCardSection().setHeader("Priority Reasons");
     var reasonsText = analysis.reasons.map(function(r) { return "• " + r; }).join("\n");
     reasonsSection.addWidget(CardService.newTextParagraph().setText(reasonsText));
     card.addSection(reasonsSection);
   }
   
-  // 5. Suggestion Section
-  var suggestionSection = CardService.newCardSection().setHeader("AI Response Suggestion");
+  // ── 4. AI Reply Section ──
+  var replySection = CardService.newCardSection().setHeader("✍️ AI Reply");
   
-  // Tone Selection Dropdown
-  var currentTone = tone;
+  // Tone dropdown
   var toneDropdown = CardService.newSelectionInput()
     .setType(CardService.SelectionInputType.DROPDOWN)
     .setTitle("Reply Tone")
     .setFieldName("tone")
-    .addItem("Professional", "professional", currentTone === "professional")
-    .addItem("Friendly", "friendly", currentTone === "friendly")
-    .addItem("Short & Concise", "concise", currentTone === "concise")
-    .addItem("Formal", "formal", currentTone === "formal")
-    .addItem("Casual", "casual", currentTone === "casual")
-    .setOnChangeAction(CardService.newAction().setFunctionName("onToneChange"));
+    .addItem("Professional", "professional", tone === "professional")
+    .addItem("Friendly", "friendly", tone === "friendly")
+    .addItem("Short & Concise", "concise", tone === "concise")
+    .addItem("Formal", "formal", tone === "formal")
+    .addItem("Casual", "casual", tone === "casual");
+  replySection.addWidget(toneDropdown);
   
-  suggestionSection.addWidget(toneDropdown);
-
-  if (analysis.suggestion) {
-    suggestionSection.addWidget(CardService.newTextParagraph().setText(analysis.suggestion));
-    
-    // Create Draft Button
-    var draftAction = CardService.newAction().setFunctionName("onGenerateDraft").setParameters({
-      reply: analysis.suggestion,
+  // Generate button (always visible)
+  var genAction = CardService.newAction()
+    .setFunctionName("onGenerateReply")
+    .setParameters({
+      subject: subject,
+      body: body.substring(0, 1500),
+      sender: sender,
       messageId: messageId
     });
-    suggestionSection.addWidget(CardService.newTextButton().setText("📝 Create Draft Reply").setOnClickAction(draftAction));
-  } else {
-    suggestionSection.addWidget(CardService.newTextParagraph().setText("<i>No suggestion available for this email yet. Try a different tone or click below.</i>"));
-  }
-  
-  // Always show a Refresh/Generate button
-  var refreshAction = CardService.newAction().setFunctionName("onToneChange").setParameters({tone: currentTone});
-  suggestionSection.addWidget(CardService.newTextButton()
-    .setText("✨ (Re)generate AI Reply")
-    .setOnClickAction(refreshAction)
+  replySection.addWidget(CardService.newTextButton()
+    .setText("✨ Generate AI Reply")
+    .setOnClickAction(genAction)
     .setTextButtonStyle(CardService.TextButtonStyle.FILLED));
-
+  
+  // Show the suggestion if backend already returned one
   if (analysis.suggestion) {
-    // Copy Button
-    var copyAction = CardService.newAction().setFunctionName("onCopyReply").setParameters({reply: analysis.suggestion});
-    suggestionSection.addWidget(CardService.newTextButton().setText("📋 Copy to Clipboard").setOnClickAction(copyAction));
+    replySection.addWidget(CardService.newTextParagraph().setText(analysis.suggestion));
+    
+    var draftAction = CardService.newAction()
+      .setFunctionName("onGenerateDraft")
+      .setParameters({ reply: analysis.suggestion, messageId: messageId });
+    replySection.addWidget(CardService.newTextButton()
+      .setText("📝 Create Draft Reply")
+      .setOnClickAction(draftAction));
   }
   
-  card.addSection(suggestionSection);
+  card.addSection(replySection);
   
   return card.build();
 }
 
 /**
- * Triggered when the tone dropdown changes.
+ * Called when user clicks "Generate AI Reply".
+ * Makes a separate backend call specifically for reply generation.
  */
-function onToneChange(e) {
+function onGenerateReply(e) {
+  var subject = e.parameters.subject;
+  var body = e.parameters.body;
+  var sender = e.parameters.sender;
+  var messageId = e.parameters.messageId;
+  var tone = (e.formInput && e.formInput.tone) || "professional";
+  
+  var url = BACKEND_URL + "/addon/generate-reply";
+  var payload = {
+    subject: subject,
+    snippet: body,
+    sender: sender,
+    tone: tone
+  };
+  
+  var options = {
+    method: "post",
+    contentType: "application/json",
+    headers: { "X-API-KEY": API_KEY },
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+  
+  try {
+    var response = UrlFetchApp.fetch(url, options);
+    var data = JSON.parse(response.getContentText());
+    
+    if (response.getResponseCode() == 200 && data.reply) {
+      // Build a new card showing the reply
+      var card = CardService.newCardBuilder();
+      card.setHeader(CardService.newCardHeader().setTitle("AI Generated Reply"));
+      
+      var replySection = CardService.newCardSection();
+      replySection.addWidget(CardService.newTextParagraph().setText("<b>Tone:</b> " + tone));
+      replySection.addWidget(CardService.newTextParagraph().setText(data.reply));
+      
+      var draftAction = CardService.newAction()
+        .setFunctionName("onGenerateDraft")
+        .setParameters({ reply: data.reply, messageId: messageId });
+      replySection.addWidget(CardService.newTextButton()
+        .setText("📝 Create Draft Reply")
+        .setOnClickAction(draftAction)
+        .setTextButtonStyle(CardService.TextButtonStyle.FILLED));
+      
+      card.addSection(replySection);
+      
+      // Back button
+      var backSection = CardService.newCardSection();
+      backSection.addWidget(CardService.newTextButton()
+        .setText("← Back to Analysis")
+        .setOnClickAction(CardService.newAction().setFunctionName("onBackToMain")));
+      card.addSection(backSection);
+      
+      return CardService.newActionResponseBuilder()
+        .setNavigation(CardService.newNavigation().pushCard(card.build()))
+        .build();
+    } else {
+      var errMsg = data.detail || data.error || "Unknown error";
+      return CardService.newActionResponseBuilder()
+        .setNotification(CardService.newNotification().setText("Failed to generate reply: " + errMsg))
+        .build();
+    }
+  } catch (err) {
+    return CardService.newActionResponseBuilder()
+      .setNotification(CardService.newNotification().setText("Error: " + err))
+      .build();
+  }
+}
+
+/**
+ * Navigate back to the main analysis card.
+ */
+function onBackToMain(e) {
   return CardService.newActionResponseBuilder()
-    .setNavigation(CardService.newNavigation().updateCard(buildMainCard(e)))
+    .setNavigation(CardService.newNavigation().popCard())
     .build();
 }
 
@@ -147,7 +203,7 @@ function onGenerateDraft(e) {
     message.createDraftReply(replyBody);
     
     return CardService.newActionResponseBuilder()
-      .setNotification(CardService.newNotification().setText("Draft reply created! Check your Drafts folder."))
+      .setNotification(CardService.newNotification().setText("✅ Draft reply created! Check your Drafts."))
       .build();
   } catch (err) {
     return CardService.newActionResponseBuilder()
@@ -171,9 +227,7 @@ function fetchAnalysis(subject, body, sender, tone) {
   var options = {
     method: "post",
     contentType: "application/json",
-    headers: {
-      "X-API-KEY": API_KEY
-    },
+    headers: { "X-API-KEY": API_KEY },
     payload: JSON.stringify(payload),
     muteHttpExceptions: true
   };
@@ -184,7 +238,7 @@ function fetchAnalysis(subject, body, sender, tone) {
       return JSON.parse(response.getContentText());
     } else {
       console.error("Backend Error: " + response.getContentText());
-      return {level: "ERROR", reasons: ["Could not connect to backend: " + response.getResponseCode()]};
+      return {level: "ERROR", reasons: ["Backend error: " + response.getResponseCode()]};
     }
   } catch (err) {
     console.error("Fetch Error: " + err);
@@ -196,13 +250,6 @@ function getPriorityIcon(level) {
   if (level === "HIGH") return CardService.Icon.CONFIRMATION_NUMBER_ICON;
   if (level === "MEDIUM") return CardService.Icon.DESCRIPTION;
   return CardService.Icon.EMAIL;
-}
-
-function onCopyReply(e) {
-  var reply = e.parameters.reply;
-  return CardService.newActionResponseBuilder()
-    .setNotification(CardService.newNotification().setText("Suggestion copied! (Simulated)"))
-    .build();
 }
 
 function extractEmailAddress(s) {

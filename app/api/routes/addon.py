@@ -55,6 +55,40 @@ async def analyze_email(
         log.error("Add-on analysis failed: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
+class ReplyRequest(BaseModel):
+    subject: str
+    snippet: str
+    sender: str = ""
+    tone: str = "professional"
+
+@router.post("/generate-reply")
+async def generate_reply(
+    body: ReplyRequest,
+    x_api_key: str = Header(None)
+):
+    if x_api_key != ADDON_API_KEY:
+        log.warning("Add-on reply access denied: Invalid API Key")
+        raise HTTPException(status_code=401, detail="Invalid API Key")
+    
+    log.info("Add-on reply requested for: %s (tone=%s)", body.subject[:50], body.tone)
+    
+    try:
+        # Truncate snippet to avoid overwhelming the AI
+        snippet = body.snippet[:2000] if body.snippet else ""
+        reply = generate_reply_suggestion(body.subject, snippet, body.sender, body.tone)
+        
+        if reply:
+            log.info("Reply generated successfully for: %s", body.subject[:50])
+            return {"reply": reply}
+        else:
+            log.warning("Reply generation returned None for: %s", body.subject[:50])
+            raise HTTPException(status_code=500, detail="AI could not generate a reply for this email. Try again.")
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error("Add-on reply generation failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/set-priority")
 async def set_sender_priority(
     body: PriorityUpdateRequest, 
