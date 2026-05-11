@@ -109,8 +109,11 @@ function buildMainCard(e) {
   }
   
   // Always show a Refresh/Generate button
-  var refreshAction = CardService.newAction().setFunctionName("onToneChange"); // This effectively refreshes the analysis
-  suggestionSection.addWidget(CardService.newTextButton().setText("🔄 (Re)generate AI Reply").setOnClickAction(refreshAction));
+  var refreshAction = CardService.newAction().setFunctionName("onToneChange").setParameters({tone: currentTone});
+  suggestionSection.addWidget(CardService.newTextButton()
+    .setText("✨ (Re)generate AI Reply")
+    .setOnClickAction(refreshAction)
+    .setTextButtonStyle(CardService.TextButtonStyle.FILLED));
 
   if (analysis.suggestion) {
     // Copy Button

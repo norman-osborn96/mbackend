@@ -366,7 +366,7 @@ Content: {snippet}"""
                 "system_instruction": {"parts": [{"text": (
                     "You are a professional email assistant. "
                     "Write only the reply body — no subject, no greeting, no sign-off. "
-                    "Keep it concise (2-4 sentences), professional and natural."
+                    f"Keep it concise (2-4 sentences), using a {tone} and natural tone."
                 )}]},
                 "contents": [{"role": "user", "parts": [{"text": prompt}]}],
                 "generationConfig": {
@@ -377,9 +377,18 @@ Content: {snippet}"""
             timeout=15
         )
 
+        if response.status_code != 200:
+            print(f"❌ API ERROR: Status {response.status_code} | {response.text}")
+            return None
+
         data = response.json()
+        candidates = data.get("candidates", [])
+        if not candidates:
+            print(f"⚠️ NO CANDIDATES from Gemini: {data}")
+            return None
+
         reply = (
-            data.get("candidates", [{}])[0]
+            candidates[0]
             .get("content", {})
             .get("parts", [{}])[0]
             .get("text", "")
