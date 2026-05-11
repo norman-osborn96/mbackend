@@ -30,6 +30,15 @@ def _call_gemini_api(url_path: str, payload: dict, timeout: int = 10):
         full_url = f"https://generativelanguage.googleapis.com/v1beta/{url}?key={key}"
         
         try:
+            # Add safety settings to prevent filtering of valid email content
+            if "safetySettings" not in payload:
+                payload["safetySettings"] = [
+                    {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+                    {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+                    {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+                    {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+                ]
+                
             res = requests.post(
                 full_url,
                 headers={"Content-Type": "application/json"},
@@ -57,9 +66,9 @@ CACHE_FILE = os.path.join(os.path.dirname(__file__), "../ai_cache.json")
 _cache_lock = Lock()
 
 # Cache version — bump this string to invalidate all old entries
-_CLASSIFY_VERSION = "exec_v3_action"
-_SUMMARY_VERSION  = "summary_v7_complete"
-_REPLY_VERSION    = "reply_v2"
+_CLASSIFY_VERSION = "exec_v4_safety"
+_SUMMARY_VERSION  = "summary_v8_relaxed"
+_REPLY_VERSION    = "reply_v3_safety"
 
 
 # ─── Cache helpers ───────────────────────────────────────────────────────────
@@ -263,15 +272,12 @@ Content: {snippet}"""
 
 _SUMMARY_SYSTEM_PROMPT = """You rewrite email text into a concise neutral inbox summary.
 
-STRICT RULES (must follow all):
-• Use ONLY facts that appear verbatim or clearly in the Subject and Content below. Do NOT add names, dates, amounts, deadlines, risks, actions, or consequences that are not in that text.
-• Do NOT infer, guess, generalize, or fill gaps. If something is not stated, omit it.
-• Do NOT mention "consequences of ignoring" unless the email itself states them.
-• Output ONLY the summary text. Start with the first sentence immediately — no preamble, labels, apologies, or phrases like "Here is", "Summary:", or "Below is".
-• Write exactly two complete sentences when Content has usable detail; otherwise one complete sentence. Each sentence must be grammatically complete (do not cut off mid-phrase). Aim for about 35–45 tokens total (roughly 26–55 words).
-• When Content is not empty, the summary MUST include at least one concrete detail from Content—do not merely repeat or lightly rephrase the Subject alone.
-• No bullet points, no headers, no quotes.
-• If Content is empty or useless, paraphrase only what the Subject states in one short complete sentence."""
+Guidelines:
+• Use facts that appear in the Subject and Content below.
+• Output ONLY the summary text. Start with the first sentence immediately — no preamble.
+• Write one or two complete sentences.
+• When Content has detail, include a concrete detail from it.
+• If Content is empty, paraphrase what the Subject states in one short sentence."""
 
 
 def summarize_email(subject: str, snippet: str):
