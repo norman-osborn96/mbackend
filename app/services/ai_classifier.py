@@ -134,13 +134,11 @@ def _clamp_summary_words(text: str, max_words: int = 56) -> str:
 _EXEC_SYSTEM_PROMPT = """You are a senior executive email triage assistant for a CEO, CFO, or CXO.
 Your job is to classify each email into exactly one priority level using the strict criteria below.
 
-HIGH priority — use ONLY when ALL of the following are true:
+HIGH priority — use when:
   • The executive must personally take action or make a decision
-  • Delay beyond 24 hours could cause material financial, legal, regulatory, or reputational harm
-  • Examples: board/investor meetings requiring approval, M&A / term-sheet signings, regulatory deadlines
-    (SEC, RBI, SEBI, IRS filings), legal notices / lawsuits, data breaches / security incidents,
-    quarterly earnings issues, company crisis or production outage, contract terminations,
-    funding-round approvals, restructuring decisions, compliance audit findings.
+  • The matter is time-sensitive or involves important stakeholders (investors, board, clients)
+  • Examples: board/investor meetings, M&A, regulatory deadlines, legal notices, 
+    customer escalations, funding-round approvals, or urgent internal requests.
 
 MEDIUM priority — the executive should be aware but does not need to act today:
   • Senior-leadership updates, escalated project issues, performance or budget reviews,
@@ -339,22 +337,22 @@ Write the grounded summary now: one or two complete sentences only, no preamble 
 
 # ─── Reply suggestion function ────────────────────────────────────────────────
 
-def generate_reply_suggestion(subject: str, snippet: str, sender: str = ""):
+def generate_reply_suggestion(subject: str, snippet: str, sender: str = "", tone: str = "professional"):
     try:
         cache = _load_cache()
-        key = _make_reply_key(subject, snippet)
+        key = _make_reply_key(subject, snippet + "::" + tone)
 
         if key in cache:
             print("⚡ REPLY CACHE HIT →", subject[:60])
             return cache[key]
 
-        print("✍️ REPLY CALL →", subject[:60])
+        print("✍️ REPLY CALL →", subject[:60], "| Tone:", tone)
 
-        prompt = f"""Write a concise, professional reply to this email.
+        prompt = f"""Write a concise, {tone} reply to this email.
 The reply should:
 - Acknowledge the email's main point
 - Provide a clear and relevant response
-- Be professional but natural in tone
+- Be {tone} in tone
 - Be 2-4 sentences maximum
 - NOT include a subject line, greeting or sign-off — just the reply body
 

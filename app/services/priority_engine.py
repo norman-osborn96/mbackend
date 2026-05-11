@@ -197,9 +197,9 @@ def _is_automated_sender(sender_email: str) -> bool:
 #
 # Raising thresholds compared to the old engine (was 60/30) so HIGH is harder to
 # reach from keywords alone and the AI prompt's stricter criteria are respected.
-_SCORE_HIGH   = 70   # keyword score must be ≥ 70 to short-circuit to HIGH
-_SCORE_MEDIUM = 35   # keyword score ≥ 35 → MEDIUM (if not HIGH)
-_BULK_CUTOFF  = -25  # keyword score ≤ -25 → LOW immediately, skip AI
+_SCORE_HIGH   = 60   # Lowered from 70
+_SCORE_MEDIUM = 30   # Lowered from 35
+_BULK_CUTOFF  = -25  # stays same
 
 # AI confidence floor: if AI says HIGH but confidence is below this, downgrade to MEDIUM
 _HIGH_CONFIDENCE_FLOOR = 0.72
