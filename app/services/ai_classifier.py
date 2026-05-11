@@ -21,9 +21,15 @@ def _call_gemini_api(url_path: str, payload: dict, timeout: int = 10):
     # Try a few common model names if the first one fails with 404
     model_options = [url_path]
     if "flash" in url_path:
-        model_options.extend(["gemini-1.5-flash-latest", "gemini-pro", "gemini-1.5-pro"])
+        model_options.extend([
+            "gemini-2.0-flash", 
+            "gemini-2.0-flash-exp",
+            "gemini-1.5-flash-latest", 
+            "gemini-1.5-flash",
+            "gemini-pro"
+        ])
     else:
-        model_options.extend(["gemini-1.5-flash", "gemini-pro"])
+        model_options.extend(["gemini-2.0-flash", "gemini-1.5-flash", "gemini-pro"])
 
     last_response = None
     for model_name in model_options:
