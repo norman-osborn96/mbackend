@@ -27,7 +27,7 @@ def _call_gemini_api(url_path: str, payload: dict, timeout: int = 10):
             _key_index += 1
             
         url = f"models/{url_path}:generateContent"
-        full_url = f"https://generativelanguage.googleapis.com/v1beta/{url}?key={key}"
+        full_url = f"https://generativelanguage.googleapis.com/v1/{url}?key={key}"
         
         try:
             # Add safety settings to prevent filtering of valid email content
@@ -66,9 +66,9 @@ CACHE_FILE = os.path.join(os.path.dirname(__file__), "../ai_cache.json")
 _cache_lock = Lock()
 
 # Cache version — bump this string to invalidate all old entries
-_CLASSIFY_VERSION = "exec_v7_v1api"
-_SUMMARY_VERSION  = "summary_v11_v1api"
-_REPLY_VERSION    = "reply_v6_v1api"
+_CLASSIFY_VERSION = "exec_v8_v1stable"
+_SUMMARY_VERSION  = "summary_v12_v1stable"
+_REPLY_VERSION    = "reply_v7_v1stable"
 
 
 # ─── Cache helpers ───────────────────────────────────────────────────────────
