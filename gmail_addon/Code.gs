@@ -20,7 +20,7 @@ function buildMainCard(e) {
   var body = message.getPlainBody().substring(0, 3000); // Increased limit for better context
   
   // Call Backend
-  var tone = e.parameters.tone || "professional";
+  var tone = (e.formInput && e.formInput.tone) || (e.parameters && e.parameters.tone) || "professional";
   var analysis = fetchAnalysis(subject, body, sender, tone);
   
   var card = CardService.newCardBuilder();
