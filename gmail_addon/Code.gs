@@ -88,7 +88,7 @@ function buildMainCard(e) {
   var suggestionSection = CardService.newCardSection().setHeader("AI Response Suggestion");
   
   // Tone Selection Dropdown
-  var currentTone = e.parameters.tone || "professional";
+  var currentTone = tone;
   var toneDropdown = CardService.newSelectionInput()
     .setType(CardService.SelectionInputType.DROPDOWN)
     .setTitle("Reply Tone")
