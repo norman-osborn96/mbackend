@@ -22,6 +22,7 @@ def _call_gemini_api(url_path: str, payload: dict, timeout: int = 10):
     model_options = [url_path]
     if "flash" in url_path:
         model_options.extend([
+            "gemini-2.5-flash", 
             "gemini-2.0-flash", 
             "gemini-2.0-flash-exp",
             "gemini-1.5-flash-latest", 
@@ -31,50 +32,54 @@ def _call_gemini_api(url_path: str, payload: dict, timeout: int = 10):
     else:
         model_options.extend(["gemini-2.0-flash", "gemini-1.5-flash", "gemini-pro"])
 
+    # Try both stable and beta endpoints
+    api_versions = ["v1beta", "v1"]
+    
     last_response = None
-    for model_name in model_options:
-        for attempt in range(len(keys)):
-            with _key_lock:
-                current_idx = _key_index % len(keys)
-                key = keys[current_idx]
-                _key_index += 1
-                
-            url = f"models/{model_name}:generateContent"
-            full_url = f"https://generativelanguage.googleapis.com/v1beta/{url}?key={key}"
-            
-            try:
-                # Add safety settings to prevent filtering of valid email content
-                if "safetySettings" not in payload:
-                    payload["safetySettings"] = [
-                        {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-                        {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-                        {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-                        {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
-                    ]
+    for api_version in api_versions:
+        for model_name in model_options:
+            for attempt in range(len(keys)):
+                with _key_lock:
+                    current_idx = _key_index % len(keys)
+                    key = keys[current_idx]
+                    _key_index += 1
                     
-                res = requests.post(
-                    full_url,
-                    headers={"Content-Type": "application/json"},
-                    json=payload,
-                    timeout=timeout
-                )
-                last_response = res
+                url = f"models/{model_name}:generateContent"
+                full_url = f"https://generativelanguage.googleapis.com/{api_version}/{url}?key={key}"
                 
-                if res.status_code == 429:
-                    print(f"⚠️ Key {current_idx + 1}/{len(keys)} rate limited (429). Retrying...")
+                try:
+                    # Add safety settings to prevent filtering of valid email content
+                    if "safetySettings" not in payload:
+                        payload["safetySettings"] = [
+                            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+                            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+                            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+                            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+                        ]
+                        
+                    res = requests.post(
+                        full_url,
+                        headers={"Content-Type": "application/json"},
+                        json=payload,
+                        timeout=timeout
+                    )
+                    last_response = res
+                    
+                    if res.status_code == 429:
+                        print(f"⚠️ Key {current_idx + 1}/{len(keys)} rate limited (429). Retrying...")
+                        continue
+                    
+                    if res.status_code == 404:
+                        print(f"⚠️ {api_version} Model '{model_name}' not found (404). Trying next...")
+                        break # Try next model or version
+                        
+                    return res
+                except Exception as e:
+                    print(f"❌ API call error with key {current_idx + 1}/{len(keys)}: {e}")
+                    if attempt == len(keys) - 1:
+                        if last_response is not None: return last_response
+                        raise e
                     continue
-                
-                if res.status_code == 404:
-                    print(f"⚠️ Model '{model_name}' not found (404). Trying fallback...")
-                    break # Try next model name
-                    
-                return res
-            except Exception as e:
-                print(f"❌ API call error with key {current_idx + 1}/{len(keys)}: {e}")
-                if attempt == len(keys) - 1:
-                    if last_response is not None: return last_response
-                    raise e
-                continue
             
     return last_response
 
