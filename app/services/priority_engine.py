@@ -315,13 +315,13 @@ def calculate_priority(email: dict) -> dict:
                 ai_level  = "MEDIUM"
                 ai_reason = f"Keyword signals outweigh AI LOW assessment: {ai_reason}"
 
-            # Summary will be handled by _finalize if we don't pass it here,
-            # but we can try to get it now to keep the flow.
-            summary = None
-            try:
-                summary = summarize_email(s_subj, s_content)
-            except Exception:
-                pass
+            # Use the summary returned by the combined AI call if available
+            summary = ai_result.get("summary")
+            if not summary:
+                try:
+                    summary = summarize_email(s_subj, s_content)
+                except Exception:
+                    pass
 
             return _finalize(
                 ai_level,

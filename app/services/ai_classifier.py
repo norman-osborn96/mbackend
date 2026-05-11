@@ -66,9 +66,9 @@ CACHE_FILE = os.path.join(os.path.dirname(__file__), "../ai_cache.json")
 _cache_lock = Lock()
 
 # Cache version — bump this string to invalidate all old entries
-_CLASSIFY_VERSION = "exec_v4_safety"
-_SUMMARY_VERSION  = "summary_v8_relaxed"
-_REPLY_VERSION    = "reply_v3_safety"
+_CLASSIFY_VERSION = "exec_v5_combined"
+_SUMMARY_VERSION  = "summary_v9_relaxed"
+_REPLY_VERSION    = "reply_v4_resilient"
 
 
 # ─── Cache helpers ───────────────────────────────────────────────────────────
@@ -164,7 +164,13 @@ Also set "action":
   • "FYI" if awareness suffices and no reply is expected.
 
 Return ONLY valid JSON — no markdown, no extra text:
-{"priority": "HIGH|MEDIUM|LOW", "reason": "one concise sentence", "confidence": 0.0-1.0, "action": "REQUIRES_REPLY" | "FYI"}
+{
+  "priority": "HIGH|MEDIUM|LOW",
+  "reason": "one concise sentence explaining why",
+  "confidence": 0.0-1.0,
+  "action": "REQUIRES_REPLY" | "FYI",
+  "summary": "1-2 concise sentences summarizing the email content"
+}
 
 Confidence scoring:
   0.9–1.0 → very strong, unambiguous signals
@@ -242,6 +248,7 @@ Content: {snippet}"""
                     "reason": reason or "AI classification",
                     "confidence": confidence,
                     "action": action,
+                    "summary": parsed.get("summary")
                 }
                 cache[key] = result
                 _save_cache(cache)
