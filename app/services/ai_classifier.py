@@ -27,7 +27,7 @@ def _call_gemini_api(url_path: str, payload: dict, timeout: int = 10):
             _key_index += 1
             
         url = f"models/{url_path}:generateContent"
-        full_url = f"https://generativelanguage.googleapis.com/v1/{url}?key={key}"
+        full_url = f"https://generativelanguage.googleapis.com/v1beta/{url}?key={key}"
         
         try:
             # Add safety settings to prevent filtering of valid email content
@@ -197,18 +197,15 @@ def classify_email_ai(subject: str, snippet: str, sender_domain: str = ""):
 
         domain_context = f"\nSender domain: {sender_domain}" if sender_domain else ""
 
-        user_prompt = f"""Classify this email for a CEO/CFO/CXO inbox.{domain_context}
-Subject: {subject}
-Content: {snippet}"""
+        user_prompt = f"SYSTEM INSTRUCTION: {_EXEC_SYSTEM_PROMPT}\n\nClassify this email for a CEO/CFO/CXO inbox.{domain_context}\nSubject: {subject}\nContent: {snippet}"
 
         response = _call_gemini_api(
             "gemini-1.5-flash",
             {
-                "system_instruction": {"parts": [{"text": _EXEC_SYSTEM_PROMPT}]},
                 "contents": [{"role": "user", "parts": [{"text": user_prompt}]}],
                 "generationConfig": {
                     "temperature": 0.05,
-                    "maxOutputTokens": 120
+                    "maxOutputTokens": 200
                 }
             },
             timeout=10
@@ -312,14 +309,15 @@ Content: {snippet}
 
 Write the grounded summary now: one or two complete sentences only, no preamble (only from the lines above)."""
 
+        user_prompt = f"SYSTEM INSTRUCTION: {_SUMMARY_SYSTEM_PROMPT}\n\nSubject: {subject}\nContent: {snippet}\n\nWrite the grounded summary now: one or two complete sentences only."
+
         response = _call_gemini_api(
             "gemini-1.5-flash",
             {
-                "system_instruction": {"parts": [{"text": _SUMMARY_SYSTEM_PROMPT}]},
                 "contents": [{"role": "user", "parts": [{"text": user_prompt}]}],
                 "generationConfig": {
                     "temperature": 0.05,
-                    "maxOutputTokens": 220
+                    "maxOutputTokens": 250
                 }
             },
             timeout=15
@@ -391,18 +389,21 @@ From: {sender}
 Subject: {subject}
 Content: {snippet}"""
 
+        system_instr = (
+            "You are a professional email assistant. "
+            "Write only the reply body — no subject, no greeting, no sign-off. "
+            f"Keep it concise (2-4 sentences), using a {tone} and natural tone."
+        )
+        
+        user_prompt = f"SYSTEM INSTRUCTION: {system_instr}\n\nSubject: {subject}\nSender: {sender}\nContent: {snippet}\n\nWrite the reply body now:"
+
         response = _call_gemini_api(
             "gemini-1.5-flash",
             {
-                "system_instruction": {"parts": [{"text": (
-                    "You are a professional email assistant. "
-                    "Write only the reply body — no subject, no greeting, no sign-off. "
-                    f"Keep it concise (2-4 sentences), using a {tone} and natural tone."
-                )}]},
-                "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+                "contents": [{"role": "user", "parts": [{"text": user_prompt}]}],
                 "generationConfig": {
                     "temperature": 0.5,
-                    "maxOutputTokens": 200
+                    "maxOutputTokens": 250
                 }
             },
             timeout=15
