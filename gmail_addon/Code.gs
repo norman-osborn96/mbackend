@@ -44,13 +44,6 @@ function buildMainCard(e) {
       .setIcon(CardService.Icon.STAR));
   }
   
-  if (analysis.score !== undefined) {
-    prioritySection.addWidget(CardService.newKeyValue()
-      .setTopLabel("Impact Score")
-      .setContent("<b>" + analysis.score + "</b>")
-      .setIcon(CardService.Icon.BOOKMARK));
-  }
-  
   card.addSection(prioritySection);
 
   // 2. Sender Section
@@ -111,7 +104,15 @@ function buildMainCard(e) {
       messageId: messageId
     });
     suggestionSection.addWidget(CardService.newTextButton().setText("📝 Create Draft Reply").setOnClickAction(draftAction));
-    
+  } else {
+    suggestionSection.addWidget(CardService.newTextParagraph().setText("<i>No suggestion available for this email yet. Try a different tone or click below.</i>"));
+  }
+  
+  // Always show a Refresh/Generate button
+  var refreshAction = CardService.newAction().setFunctionName("onToneChange"); // This effectively refreshes the analysis
+  suggestionSection.addWidget(CardService.newTextButton().setText("🔄 (Re)generate AI Reply").setOnClickAction(refreshAction));
+
+  if (analysis.suggestion) {
     // Copy Button
     var copyAction = CardService.newAction().setFunctionName("onCopyReply").setParameters({reply: analysis.suggestion});
     suggestionSection.addWidget(CardService.newTextButton().setText("📋 Copy to Clipboard").setOnClickAction(copyAction));
